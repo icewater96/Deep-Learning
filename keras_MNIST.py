@@ -10,14 +10,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.rcParams['figure.figsize'] = (7,7)
 
-import pydot
+#import pydot
 
+import keras
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
 from keras.utils import np_utils
 #from keras.utils.visualize_util import plot
 
+
+class TempCallback(keras.callbacks.Callback):
+    # For intialization
+    def on_train_begin(self, logs={}):
+        self.weight_std = []
+        
+    # Increment per batch
+    def on_epoch_end(self, batch, logs={}):
+        weigth_list = self.model.get_weights()
+        self.weight_std.append( np.std(weigth_list[0]))
+        
 
 nb_classes = 10
 
@@ -48,15 +60,15 @@ Y_test = np_utils.to_categorical(Y_test, nb_classes)
 
 # Construct model
 model = Sequential()
-model.add(Dense(512, input_shape=(784,)))
+model.add(Dense(7, input_shape=(784,)))
 model.add(Activation('relu'))
 model.add(Dropout(0.4))
 
-model.add(Dense(512))
+model.add(Dense(3))
 model.add(Activation('relu'))
 model.add(Dropout(0.4))
 
-model.add(Dense(512))
+model.add(Dense(5))
 model.add(Activation('relu'))
 model.add(Dropout(0.4))
 
@@ -66,11 +78,19 @@ model.add(Activation('softmax'))
 # Compile
 model.compile(loss='categorical_crossentropy', metrics = ['accuracy'], optimizer='adam')
 
-# Train
+# Callback object 
+callback = TempCallback()
+
+# Train 
+# Hooked with callback object
 model.fit(X_train, Y_train,
-          batch_size = 128, nb_epoch = 20,
+          batch_size = 128, nb_epoch = 10,
           verbose = 2,
-          validation_data = (X_test, Y_test))
+          validation_data = (X_test, Y_test),
+          callbacks =[callback])
+
+# Collect callback results
+callback.weight_std
           
 # Evaluate
 score = model.evaluate(X_test, Y_test, verbose = 0)          
