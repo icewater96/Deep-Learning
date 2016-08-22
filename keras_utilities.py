@@ -7,19 +7,16 @@ Utitlities for keras
 
 # Good info at https://github.com/fchollet/keras/pull/171
 
-
 import keras
 import numpy as np
 import matplotlib.pyplot as plt
-
+import seaborn as sns
+import pandas as pd
 
 class MonitorWeightsCallback(keras.callbacks.Callback):
-    def __init__(self, nb_epoch=100, flatten_array=True):
+    def __init__(self, nb_epoch=100):
         # Number of digits in epoch name
         self.epoch_digit_count = int(np.ceil(np.log10(nb_epoch + 0.5)))
-        
-        # Switch to flatten weight arrays
-        self.flatten_array = flatten_array
         
         self.epoch = 0
         
@@ -45,18 +42,6 @@ class MonitorWeightsCallback(keras.callbacks.Callback):
         
         
     def on_train_begin(self, logs={}):
-      
-#        # Old method based on model.get_weights()    
-#        # weight_structure:
-#        #   each item is a dict for a weight array. E.g. Input * W + B = Output, W and B are two weight arrays.
-#        #   each weight-array dict: key = epoch name, value = flattened weights for a given epoch
-#        #   get_weights() => weight_array_list
-#        #   On each epoch end, need to update weight_structure with the new weight_array_list
-#        self.weight_structure = []
-#        weight_array_list = self.model.get_weights()
-#        for weight_array in weight_array_list:
-#            self.weight_structure.append( {'Epoch 0': weight_array.reshape(np.prod(weight_array.shape))} )
-            
         # weight_structure: based on model.layers[index].get_weights()
         #   mirror the structure of model.layers            
         #   model.layers is a list of layers
@@ -64,41 +49,42 @@ class MonitorWeightsCallback(keras.callbacks.Callback):
         #       For Dense layer, get_weights() is a 2-element list, 0th for matrix and 1th for bias
         #  weight_structure: a list, each element is for a layer (called layer-element)
         #   each layer-element is a list, each element is a weight-array dict: key = epoch name, value = flattered weights in the epoch
-        self.weight_structure = []
+        self.weight_structure_flattened = []
+        self.weight_structure_original  = []
         for layer in self.model.layers:
-            layer_element = []
+            layer_element_flattened = []
+            layer_element_original = []
             for weight_array in layer.get_weights():
                 # weight_array is a numpy.ndarray
-                if self.flatten_array:
-                    layer_element.append( {'Epoch ' + self.generate_epoch_name(0): weight_array.reshape(np.prod(weight_array.shape))})
-                else:
-                    layer_element.append( {'Epoch ' + self.generate_epoch_name(0): weight_array})
+                layer_element_flattened.append( {'Epoch ' + self.generate_epoch_name(0): weight_array.reshape(np.prod(weight_array.shape))})
+                layer_element_original.append ( {'Epoch ' + self.generate_epoch_name(0): weight_array})
                 
-            self.weight_structure.append(layer_element)
+            self.weight_structure_flattened.append(layer_element_flattened)
+            self.weight_structure_original.append (layer_element_original )
             
             
     def on_epoch_end(self, batch, logs={}):
         self.epoch += 1
-        
-#        # Old method based on model.get_weights()
-#        # Update weights history
-#        weight_array_list = self.model.get_weights()
-#        for index, weight_array in enumerate(weight_array_list):
-#            self.weight_structure[index]['Epoch '+str(self.epoch)] = weight_array.reshape(np.prod(weight_array.shape))
-#        
+     
         # Update weight_structure
         for layer_index, layer in enumerate(self.model.layers):
             for weight_array_index, weight_array in enumerate(layer.get_weights()):
                 # weight_array is a numpy.ndarray
-                if self.flatten_array:
-                    self.weight_structure[layer_index][weight_array_index]['Epoch ' + self.generate_epoch_name(self.epoch)] = \
-                        weight_array.reshape(np.prod(weight_array.shape))
-                else:
-                    self.weight_structure[layer_index][weight_array_index]['Epoch ' + self.generate_epoch_name(self.epoch)] = \
-                        weight_array
+                self.weight_structure_flattened[layer_index][weight_array_index]['Epoch ' + self.generate_epoch_name(self.epoch)] = \
+                    weight_array.reshape(np.prod(weight_array.shape))
+                self.weight_structure_original[layer_index][weight_array_index]['Epoch ' + self.generate_epoch_name(self.epoch)] = \
+                    weight_array
+                        
+    def display_one_flattened_weight_array(self, layer_index=0, param_index=0):
+        # Call this function only after taininng is done
+        # layer_index and param_index start at 0. param_index = weight_array index
+    
+        plt.figure(figsize=(12, 10))
+        sns.violinplot( pd.DataFrame(self.weight_structure_flattened[layer_index][param_index]), orient='h' )
         
-#    def display_one_weight_
-
+        
+#    def display_all_flattened_weight_arrays(self):
+        
 
 class MonitorMetricsCallback(keras.callbacks.Callback):
     def __init__(self, live_display=True, display_interval=1, figsize=(10, 7)):
@@ -138,12 +124,10 @@ class MonitorMetricsCallback(keras.callbacks.Callback):
     def on_train_end(self, logs={}):
         if not(self.live_display) or (self.display_interval != 1):
             self.display()
-
             
     def display(self):
         # For display
         plt.figure(self.fig.number)
-        #ax = metrics_figure.get_axes()[0]  # Assume just 1 axes
         plt.clf()
 
         num_subplot = len(self.model.metrics_names)
