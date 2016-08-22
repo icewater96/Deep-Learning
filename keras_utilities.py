@@ -14,9 +14,38 @@ import matplotlib.pyplot as plt
 
 
 class MonitorWeightsCallback(keras.callbacks.Callback):
-    def on_train_begin(self, logs={}):
+    def __init__(self, nb_epoch=100, flatten_array=True):
+        # Number of digits in epoch name
+        self.epoch_digit_count = int(np.ceil(np.log10(nb_epoch + 0.5)))
+        
+        # Switch to flatten weight arrays
+        self.flatten_array = flatten_array
+        
         self.epoch = 0
         
+    def generate_epoch_name(self, epoch):
+        # Stardardize display of epoch number
+        # epoch: the number of epoch. integer
+        base = '0' * self.epoch_digit_count
+        epoch_string = str(epoch)
+        
+        if len(epoch_string) >= len(base):
+            return_value = epoch_string
+        else:
+            return_value = []
+            delta = len(base) - len(epoch_string)
+            for i in range(len(base)):
+                if i < delta:
+                    return_value.append(base[i])
+                else:
+                    return_value.append(epoch_string[i-delta])
+                    
+            return_value = ''.join(return_value)
+        return return_value                
+        
+        
+    def on_train_begin(self, logs={}):
+      
 #        # Old method based on model.get_weights()    
 #        # weight_structure:
 #        #   each item is a dict for a weight array. E.g. Input * W + B = Output, W and B are two weight arrays.
@@ -40,7 +69,10 @@ class MonitorWeightsCallback(keras.callbacks.Callback):
             layer_element = []
             for weight_array in layer.get_weights():
                 # weight_array is a numpy.ndarray
-                layer_element.append( {'Epoch 0': weight_array.reshape(np.prod(weight_array.shape))})
+                if self.flatten_array:
+                    layer_element.append( {'Epoch ' + self.generate_epoch_name(0): weight_array.reshape(np.prod(weight_array.shape))})
+                else:
+                    layer_element.append( {'Epoch ' + self.generate_epoch_name(0): weight_array})
                 
             self.weight_structure.append(layer_element)
             
@@ -58,10 +90,14 @@ class MonitorWeightsCallback(keras.callbacks.Callback):
         for layer_index, layer in enumerate(self.model.layers):
             for weight_array_index, weight_array in enumerate(layer.get_weights()):
                 # weight_array is a numpy.ndarray
-                self.weight_structure[layer_index][weight_array_index]['Epoch '+str(self.epoch)] = \
-                    weight_array.reshape(np.prod(weight_array.shape))
+                if self.flatten_array:
+                    self.weight_structure[layer_index][weight_array_index]['Epoch ' + self.generate_epoch_name(self.epoch)] = \
+                        weight_array.reshape(np.prod(weight_array.shape))
+                else:
+                    self.weight_structure[layer_index][weight_array_index]['Epoch ' + self.generate_epoch_name(self.epoch)] = \
+                        weight_array
         
-
+#    def display_one_weight_
 
 
 class MonitorMetricsCallback(keras.callbacks.Callback):
