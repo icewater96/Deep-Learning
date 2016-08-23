@@ -75,12 +75,50 @@ class MonitorWeightsCallback(keras.callbacks.Callback):
                 self.weight_structure_original[layer_index][weight_array_index]['Epoch ' + self.generate_epoch_name(self.epoch)] = \
                     weight_array
                         
-    def display_one_flattened_weight_array(self, layer_index=0, param_index=0):
+    def display_one_flattened_weight_array(self, layer_index=0, param_index=0, bins=None):
         # Call this function only after taininng is done
         # layer_index and param_index start at 0. param_index = weight_array index
+        # bins: results of np.linspace()
     
-        plt.figure(figsize=(12, 10))
-        sns.violinplot( pd.DataFrame(self.weight_structure_flattened[layer_index][param_index]), orient='h' )
+        if bins is None:
+            bins = np.linspace(-1, 1, 20)
+            
+        plt.figure(figsize=(15, 10))
+        
+        weight_array_dict = self.weight_structure_flattened[layer_index][param_index]
+        epoch_name_list = weight_array_dict.keys()
+        epoch_name_list.sort()
+        num_subplot = len(epoch_name_list) + 1  # +1 is for text subplot
+        num_row = np.round(np.sqrt(num_subplot))
+        num_col = np.ceil( float(num_subplot) / num_row )
+
+        for subplot_index, epoch_name in enumerate(epoch_name_list):
+            temp_ax = plt.subplot(num_row, num_col, subplot_index + 1)
+            plt.hist(weight_array_dict[epoch_name], bins)
+            #plt.title(epoch_name)
+            temp_ax.set_xticklabels([])
+            temp_ax.set_yticklabels([])     
+            
+            temp_xlim = temp_ax.get_xlim()
+            temp_ylim = temp_ax.get_ylim()
+            temp_ax.text(temp_xlim[0] + 0.05 * (temp_xlim[1] - temp_xlim[0] ), 
+                         temp_ylim[0] + 0.9 * (temp_ylim[1] - temp_ylim[0] ),
+                         epoch_name )
+            
+        # Text subplot
+        temp_ax = plt.subplot(num_row, num_col, num_subplot)            
+        temp_ax.plot([0, 1], [0, 1], '.')
+        temp_ax.text( 0.2, 0.5, 'Layer = ' + str(layer_index) + '\n' +  
+                                'Param = ' + str(param_index) + '\n' +
+                                'Min bin = ' + str(min(bins)) + '\n' + 
+                                'Max bin = ' + str(max(bins)) + '\n',
+                     multialignment='left')
+        temp_ax.set_xticklabels([])
+        temp_ax.set_yticklabels([])  
+        
+        plt.tight_layout()
+            
+        #sns.violinplot( pd.DataFrame(self.weight_structure_flattened[layer_index][param_index]), orient='h' )
         
         
 #    def display_all_flattened_weight_arrays(self):
