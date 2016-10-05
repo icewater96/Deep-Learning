@@ -81,7 +81,7 @@ class MonitorWeightsCallback(keras.callbacks.Callback):
         # bins: results of np.linspace()
     
         if bins is None:
-            bins = np.linspace(-1, 1, 20)
+            bins = np.linspace(-1, 1, 50)
             
         plt.figure(figsize=(15, 10))
         
@@ -135,8 +135,12 @@ class MonitorMetricsCallback(keras.callbacks.Callback):
         # display_interval: how frequently display() is executed. 
         self.display_interval = display_interval
 
-        # Start at 1        
+        # epoch = 1 is the 1st epoch    
+        # epoch = 0 is the intialization
         self.epoch = 0
+        
+        # Internal state
+        self.displayed_in_this_epoch = False
     
     def on_train_begin(self, logs={}):
         # Metrics
@@ -144,6 +148,9 @@ class MonitorMetricsCallback(keras.callbacks.Callback):
         for metrics in self.model.metrics_names:
             self.metrics[metrics] = []
             self.metrics['val_'+metrics] = []
+            
+    def on_epoch_begin(self, batch, logs={}):
+        self.displayed_in_this_epoch = False
         
     def on_epoch_end(self, batch, logs={}):
         # Update metrics history
@@ -157,10 +164,11 @@ class MonitorMetricsCallback(keras.callbacks.Callback):
         if self.live_display:
             if ((self.epoch % self.display_interval) == 0) or (self.epoch == 1):
                 self.display()
+                self.displayed_in_this_epoch = True                
             
             
     def on_train_end(self, logs={}):
-        if not(self.live_display) or (self.display_interval != 1):
+        if not(self.displayed_in_this_epoch):
             self.display()
             
     def display(self):
@@ -175,8 +183,12 @@ class MonitorMetricsCallback(keras.callbacks.Callback):
             train_metrics_name = self.model.metrics_names[subplot_index]                
             test_metrics_name  = 'val_' + train_metrics_name
         
-            plt.plot(self.metrics[train_metrics_name], 'b-o')
-            plt.plot(self.metrics[test_metrics_name ], 'r-o')
+            if len(self.metrics[train_metrics_name]) <= 30:
+                plt.plot(range(1, len(self.metrics[train_metrics_name]) + 1), self.metrics[train_metrics_name], 'b-o')
+                plt.plot(range(1, len(self.metrics[test_metrics_name ]) + 1), self.metrics[test_metrics_name ], 'r-o')
+            else:
+                plt.plot(range(1, len(self.metrics[train_metrics_name]) + 1), self.metrics[train_metrics_name], 'b-')
+                plt.plot(range(1, len(self.metrics[test_metrics_name ]) + 1), self.metrics[test_metrics_name ], 'r-')
             legend_list = [train_metrics_name, test_metrics_name]
 
             plt.legend(legend_list, loc='best')    
