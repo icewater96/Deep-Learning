@@ -57,7 +57,7 @@ model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(nb_pool, nb_pool)))
 model.add(Dropout(0.25))
 
-model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]), border_mode='main'))
+model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1], border_mode='valid'))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(nb_pool, nb_pool)))
 model.add(Dropout(0.25))
