@@ -1,8 +1,0 @@
-http://danielhnyk.cz/predicting-sequences-vectors-keras-using-rnn-lstm/
-
-http://ml4a.github.io/guides/recurrent_neural_networks/
-
-http://machinelearningmastery.com/time-series-prediction-lstm-recurrent-neural-networks-python-keras/
-
-https://github.com/fchollet/keras/blob/master/examples/imdb_lstm.py
-
